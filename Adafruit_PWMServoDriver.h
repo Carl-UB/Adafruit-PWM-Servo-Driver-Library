@@ -85,10 +85,10 @@ public:
   void setPWMFreq(float freq);
   void setOutputMode(bool totempole);
   uint16_t getPWM(uint8_t num, bool off = false);
-  uint8_t setPWM(uint8_t num, uint16_t on, uint16_t off);
-  void setPin(uint8_t num, uint16_t val, bool invert = false);
+  bool setPWM(uint8_t num, uint16_t on, uint16_t off);
+  bool setPin(uint8_t num, uint16_t val, bool invert = false);
   uint8_t readPrescale(void);
-  void writeMicroseconds(uint8_t num, uint16_t Microseconds);
+  bool writeMicroseconds(uint8_t num, uint16_t Microseconds);
 
   void setOscillatorFrequency(uint32_t freq);
   uint32_t getOscillatorFrequency(void);

@@ -228,9 +228,9 @@ uint16_t Adafruit_PWMServoDriver::getPWM(uint8_t num, bool off) {
  *  @param  num One of the PWM output pins, from 0 to 15
  *  @param  on At what point in the 4096-part cycle to turn the PWM output ON
  *  @param  off At what point in the 4096-part cycle to turn the PWM output OFF
- *  @return result from endTransmission
+ *  @return success of i2c write
  */
-uint8_t Adafruit_PWMServoDriver::setPWM(uint8_t num, uint16_t on,
+bool Adafruit_PWMServoDriver::setPWM(uint8_t num, uint16_t on,
                                         uint16_t off) {
 #ifdef ENABLE_DEBUG_OUTPUT
   Serial.print("Setting PWM ");
@@ -247,9 +247,7 @@ uint8_t Adafruit_PWMServoDriver::setPWM(uint8_t num, uint16_t on,
   buffer[2] = on >> 8;
   buffer[3] = off;
   buffer[4] = off >> 8;
-  i2c_dev->write(buffer, 5);
-
-  return 0;
+  return i2c_dev->write(buffer, 5);
 }
 
 /*!
@@ -261,31 +259,37 @@ uint8_t Adafruit_PWMServoDriver::setPWM(uint8_t num, uint16_t on,
  *   @param  val The number of ticks out of 4096 to be active, should be a value
  * from 0 to 4095 inclusive.
  *   @param  invert If true, inverts the output, defaults to 'false'
+ *   @return setPWM response, i.e. success of i2c write
  */
-void Adafruit_PWMServoDriver::setPin(uint8_t num, uint16_t val, bool invert) {
+bool Adafruit_PWMServoDriver::setPin(uint8_t num, uint16_t val, bool invert) {
   // Clamp value between 0 and 4095 inclusive.
   val = min(val, (uint16_t)4095);
+
+  bool success = false;
+
   if (invert) {
     if (val == 0) {
       // Special value for signal fully on.
-      setPWM(num, 4096, 0);
+      success = setPWM(num, 4096, 0);
     } else if (val == 4095) {
       // Special value for signal fully off.
-      setPWM(num, 0, 4096);
+      success = setPWM(num, 0, 4096);
     } else {
-      setPWM(num, 0, 4095 - val);
+      success = setPWM(num, 0, 4095 - val);
     }
   } else {
     if (val == 4095) {
       // Special value for signal fully on.
-      setPWM(num, 4096, 0);
+      success = setPWM(num, 4096, 0);
     } else if (val == 0) {
       // Special value for signal fully off.
-      setPWM(num, 0, 4096);
+      success = setPWM(num, 0, 4096);
     } else {
-      setPWM(num, 0, val);
+      success = setPWM(num, 0, val);
     }
   }
+
+  return success;
 }
 
 /*!
@@ -293,8 +297,9 @@ void Adafruit_PWMServoDriver::setPin(uint8_t num, uint16_t val, bool invert) {
  * microseconds, output is not precise
  *  @param  num One of the PWM output pins, from 0 to 15
  *  @param  Microseconds The number of Microseconds to turn the PWM output ON
+ *  @return setPWM response, i.e. success of i2c write
  */
-void Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
+bool Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
                                                 uint16_t Microseconds) {
 #ifdef ENABLE_DEBUG_OUTPUT
   Serial.print("Setting PWM Via Microseconds on output");
@@ -334,7 +339,7 @@ void Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
   Serial.println(" pulse for PWM");
 #endif
 
-  setPWM(num, 0, pulse);
+  return setPWM(num, 0, pulse);
 }
 
 /*!
