@@ -150,12 +150,7 @@ void Adafruit_PWMServoDriver::setPWMFreq(float freq) {
   if (freq > 3500)
     freq = 3500; // Datasheet limit is 3052=50MHz/(4*4096)
 
-  float prescaleval = ((_oscillator_freq / (freq * 4096.0)) + 0.5) - 1;
-  if (prescaleval < PCA9685_PRESCALE_MIN)
-    prescaleval = PCA9685_PRESCALE_MIN;
-  if (prescaleval > PCA9685_PRESCALE_MAX)
-    prescaleval = PCA9685_PRESCALE_MAX;
-  uint8_t prescale = (uint8_t)prescaleval;
+  uint8_t prescale = calcPrescale(freq);
 
 #ifdef ENABLE_DEBUG_OUTPUT
   Serial.print("Final pre-scale: ");
@@ -343,6 +338,50 @@ bool Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
 }
 
 /*!
+ *  @brief  Setups the I2C interface and hardware, does not write to device
+ *  @return true if successful, otherwise false
+ */
+bool Adafruit_PWMServoDriver::beginBarebones() {
+    if (i2c_dev) {
+        delete i2c_dev;
+    }
+
+    i2c_dev = new Adafruit_I2CDevice(_i2caddr, _i2c);
+
+    i2c_dev->begin(false);
+
+    setOscillatorFrequency(FREQUENCY_OSCILLATOR);
+
+    return true;
+}
+
+bool Adafruit_PWMServoDriver::setAllOff() {
+    // Values for signal fully off.
+    uint16_t on  = 0;
+    uint16_t off = 4096;
+
+    uint8_t buffer[5];
+    buffer[0] = PCA9685_ALLLED_ON_L;
+    buffer[1] = on;
+    buffer[2] = on >> 8;
+    buffer[3] = off;
+    buffer[4] = off >> 8;
+
+    return i2c_dev->write(buffer, 5);
+}
+
+bool Adafruit_PWMServoDriver::isFreqSet(float freq) {
+    // Checks if the desired frequency is already set
+    // Works by seeing if the prescale would actually be changed by the new frequency, hence
+    // providing a way to avoid unnecessary changes, useful to avoid glitches.
+    uint8_t current_prescale = readPrescale();
+
+    uint8_t new_prescale = calcPrescale(freq);
+
+    return new_prescale == current_prescale;
+}
+
+/*!
  *  @brief  Getter for the internally tracked oscillator used for freq
  * calculations
  *  @returns The frequency the PCA9685 thinks it is running at (it cannot
@@ -371,4 +410,15 @@ uint8_t Adafruit_PWMServoDriver::read8(uint8_t addr) {
 void Adafruit_PWMServoDriver::write8(uint8_t addr, uint8_t d) {
   uint8_t buffer[2] = {addr, d};
   i2c_dev->write(buffer, 2);
+}
+
+uint8_t Adafruit_PWMServoDriver::calcPrescale(float freq) const {
+    float prescaleval = ((_oscillator_freq / (freq * 4096.0)) + 0.5) - 1;
+
+    if (prescaleval < PCA9685_PRESCALE_MIN) prescaleval = PCA9685_PRESCALE_MIN;
+    if (prescaleval > PCA9685_PRESCALE_MAX) prescaleval = PCA9685_PRESCALE_MAX;
+
+    uint8_t prescale = (uint8_t)prescaleval;
+
+    return prescale;
 }

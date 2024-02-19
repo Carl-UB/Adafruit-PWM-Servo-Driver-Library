@@ -77,6 +77,7 @@ public:
   Adafruit_PWMServoDriver();
   Adafruit_PWMServoDriver(const uint8_t addr);
   Adafruit_PWMServoDriver(const uint8_t addr, TwoWire &i2c);
+
   bool begin(uint8_t prescale = 0);
   void reset();
   void sleep();
@@ -90,6 +91,11 @@ public:
   uint8_t readPrescale(void);
   bool writeMicroseconds(uint8_t num, uint16_t Microseconds);
 
+  // Added to API
+  bool beginBarebones();
+  bool setAllOff();
+  bool isFreqSet(float freq);
+
   void setOscillatorFrequency(uint32_t freq);
   uint32_t getOscillatorFrequency(void);
 
@@ -101,6 +107,8 @@ private:
   uint32_t _oscillator_freq;
   uint8_t read8(uint8_t addr);
   void write8(uint8_t addr, uint8_t d);
+
+  uint8_t calcPrescale(float freq) const;
 };
 
 #endif
