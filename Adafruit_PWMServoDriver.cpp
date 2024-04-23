@@ -338,7 +338,7 @@ bool Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
 }
 
 /*!
- *  @brief  Setups the I2C interface and hardware, does not write to device
+ *  @brief  Setups the I2C interface and hardware without resetting or changing frequency.
  *  @return true if successful, otherwise false
  */
 bool Adafruit_PWMServoDriver::beginBarebones() {
@@ -349,6 +349,14 @@ bool Adafruit_PWMServoDriver::beginBarebones() {
     i2c_dev = new Adafruit_I2CDevice(_i2caddr, _i2c);
 
     i2c_dev->begin(false);
+
+    uint8_t old_mode = read8(PCA9685_MODE1);
+
+    uint8_t new_mode = (old_mode & ~MODE1_SLEEP) | MODE1_AI;
+
+    if (new_mode != old_mode) {
+        write8(PCA9685_MODE1, new_mode);
+    }
 
     setOscillatorFrequency(FREQUENCY_OSCILLATOR);
 
