@@ -314,29 +314,13 @@ bool Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
   double pulselength;
   pulselength = 1000000; // 1,000,000 us per second
 
-  constexpr auto debugpin{16};
-  pinMode(debugpin, OUTPUT);
-  digitalWrite(debugpin, HIGH);
   // Read prescale
   uint16_t prescale = readPrescale();
   if (prescale == 0) {
-    Serial.println("error detected");
+    #ifdef ENABLE_DEBUG_OUTPUT
+    Serial.println("Prescale read error detected");
+    #endif
     return false;
-  }
-  digitalWrite(debugpin, LOW);
-  delayMicroseconds(5);
-
-  // DEBUG
-  if (prescale != 0x79) {
-    digitalWrite(debugpin, HIGH);
-    delayMicroseconds(1);
-    digitalWrite(debugpin, LOW);
-    delayMicroseconds(1);
-    digitalWrite(debugpin, HIGH);
-    delayMicroseconds(1);
-    digitalWrite(debugpin, LOW);
-    delayMicroseconds(1);
-    Serial.printf("! PS:0x%X\n", prescale);
   }
 
 #ifdef ENABLE_DEBUG_OUTPUT
