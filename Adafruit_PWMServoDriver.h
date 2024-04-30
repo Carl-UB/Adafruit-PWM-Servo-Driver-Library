@@ -100,12 +100,17 @@ public:
   uint32_t getOscillatorFrequency(void);
 
 private:
+  struct ReadResult {
+      uint8_t val;
+      bool success;
+  };
+
   uint8_t _i2caddr;
   TwoWire *_i2c;
   Adafruit_I2CDevice *i2c_dev = NULL; ///< Pointer to I2C bus interface
 
   uint32_t _oscillator_freq;
-  uint8_t read8(uint8_t addr);
+  ReadResult read8(uint8_t addr);
   void write8(uint8_t addr, uint8_t d);
 
   uint8_t calcPrescale(float freq) const;

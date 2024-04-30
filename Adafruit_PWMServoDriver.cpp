@@ -94,7 +94,7 @@ void Adafruit_PWMServoDriver::reset() {
  *  @brief  Puts board into sleep mode
  */
 void Adafruit_PWMServoDriver::sleep() {
-  uint8_t awake = read8(PCA9685_MODE1);
+  uint8_t awake = read8(PCA9685_MODE1).val;
   uint8_t sleep = awake | MODE1_SLEEP; // set sleep bit high
   write8(PCA9685_MODE1, sleep);
   delay(5); // wait until cycle ends for sleep to be active
@@ -104,7 +104,7 @@ void Adafruit_PWMServoDriver::sleep() {
  *  @brief  Wakes board from sleep
  */
 void Adafruit_PWMServoDriver::wakeup() {
-  uint8_t sleep = read8(PCA9685_MODE1);
+  uint8_t sleep = read8(PCA9685_MODE1).val;
   uint8_t wakeup = sleep & ~MODE1_SLEEP; // set sleep bit low
   write8(PCA9685_MODE1, wakeup);
 }
@@ -115,7 +115,7 @@ void Adafruit_PWMServoDriver::wakeup() {
  *          Configures the prescale value to be used by the external clock
  */
 void Adafruit_PWMServoDriver::setExtClk(uint8_t prescale) {
-  uint8_t oldmode = read8(PCA9685_MODE1);
+  uint8_t oldmode = read8(PCA9685_MODE1).val;
   uint8_t newmode = (oldmode & ~MODE1_RESTART) | MODE1_SLEEP; // sleep
   write8(PCA9685_MODE1, newmode); // go to sleep, turn off internal oscillator
 
@@ -157,7 +157,7 @@ void Adafruit_PWMServoDriver::setPWMFreq(float freq) {
   Serial.println(prescale);
 #endif
 
-  uint8_t oldmode = read8(PCA9685_MODE1);
+  uint8_t oldmode = read8(PCA9685_MODE1).val;
   uint8_t newmode = (oldmode & ~MODE1_RESTART) | MODE1_SLEEP; // sleep
   write8(PCA9685_MODE1, newmode);                             // go to sleep
   write8(PCA9685_PRESCALE, prescale); // set the prescaler
@@ -180,7 +180,7 @@ void Adafruit_PWMServoDriver::setPWMFreq(float freq) {
  *  @param  totempole Totempole if true, open drain if false.
  */
 void Adafruit_PWMServoDriver::setOutputMode(bool totempole) {
-  uint8_t oldmode = read8(PCA9685_MODE2);
+  uint8_t oldmode = read8(PCA9685_MODE2).val;
   uint8_t newmode;
   if (totempole) {
     newmode = oldmode | MODE2_OUTDRV;
@@ -201,7 +201,13 @@ void Adafruit_PWMServoDriver::setOutputMode(bool totempole) {
  *  @return prescale value
  */
 uint8_t Adafruit_PWMServoDriver::readPrescale(void) {
-  return read8(PCA9685_PRESCALE);
+  auto result = read8(PCA9685_PRESCALE);
+  if (result.success) {
+    return result.val;
+  }
+
+  // Return impossible value for prescaler to indicate failure
+  return 0;
 }
 
 /*!
@@ -308,8 +314,30 @@ bool Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
   double pulselength;
   pulselength = 1000000; // 1,000,000 us per second
 
+  constexpr auto debugpin{16};
+  pinMode(debugpin, OUTPUT);
+  digitalWrite(debugpin, HIGH);
   // Read prescale
   uint16_t prescale = readPrescale();
+  if (prescale == 0) {
+    Serial.println("error detected");
+    return false;
+  }
+  digitalWrite(debugpin, LOW);
+  delayMicroseconds(5);
+
+  // DEBUG
+  if (prescale != 0x79) {
+    digitalWrite(debugpin, HIGH);
+    delayMicroseconds(1);
+    digitalWrite(debugpin, LOW);
+    delayMicroseconds(1);
+    digitalWrite(debugpin, HIGH);
+    delayMicroseconds(1);
+    digitalWrite(debugpin, LOW);
+    delayMicroseconds(1);
+    Serial.printf("! PS:0x%X\n", prescale);
+  }
 
 #ifdef ENABLE_DEBUG_OUTPUT
   Serial.print(prescale);
@@ -350,7 +378,7 @@ bool Adafruit_PWMServoDriver::beginBarebones() {
 
     i2c_dev->begin(false);
 
-    uint8_t old_mode = read8(PCA9685_MODE1);
+    uint8_t old_mode = read8(PCA9685_MODE1).val;
 
     uint8_t new_mode = (old_mode & ~MODE1_SLEEP) | MODE1_AI;
 
@@ -409,10 +437,13 @@ void Adafruit_PWMServoDriver::setOscillatorFrequency(uint32_t freq) {
 }
 
 /******************* Low level I2C interface */
-uint8_t Adafruit_PWMServoDriver::read8(uint8_t addr) {
+Adafruit_PWMServoDriver::ReadResult Adafruit_PWMServoDriver::read8(uint8_t addr) {
   uint8_t buffer[1] = {addr};
-  i2c_dev->write_then_read(buffer, 1, buffer, 1);
-  return buffer[0];
+  if (!i2c_dev->write_then_read(buffer, 1, buffer, 1)) {
+    // Error in I2C read, return error value
+    return {buffer[0], false};
+  }
+  return {buffer[0], true};
 }
 
 void Adafruit_PWMServoDriver::write8(uint8_t addr, uint8_t d) {
