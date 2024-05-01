@@ -105,15 +105,17 @@ private:
       bool success;
   };
 
+  ReadResult read8(uint8_t addr);
+  void write8(uint8_t addr, uint8_t d);
+
+  uint8_t calcPrescale(float freq) const;
+
   uint8_t _i2caddr;
   TwoWire *_i2c;
   Adafruit_I2CDevice *i2c_dev = NULL; ///< Pointer to I2C bus interface
 
   uint32_t _oscillator_freq;
-  ReadResult read8(uint8_t addr);
-  void write8(uint8_t addr, uint8_t d);
-
-  uint8_t calcPrescale(float freq) const;
+  uint8_t _prescale;
 };
 
 #endif

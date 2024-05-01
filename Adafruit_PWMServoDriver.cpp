@@ -79,6 +79,13 @@ bool Adafruit_PWMServoDriver::begin(uint8_t prescale) {
   // set the default internal frequency
   setOscillatorFrequency(FREQUENCY_OSCILLATOR);
 
+  _prescale = readPrescale();
+
+  if (_prescale == 0) {
+    // Invalid result, failed to read
+    return false;
+  }
+
   return true;
 }
 
@@ -165,6 +172,9 @@ void Adafruit_PWMServoDriver::setPWMFreq(float freq) {
   delay(5);
   // This sets the MODE1 register to turn on auto increment.
   write8(PCA9685_MODE1, oldmode | MODE1_RESTART | MODE1_AI);
+
+  // Update prescale - should be what we've set it to!
+  _prescale = readPrescale();
 
 #ifdef ENABLE_DEBUG_OUTPUT
   Serial.print("Mode now 0x");
@@ -314,24 +324,15 @@ bool Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
   double pulselength;
   pulselength = 1000000; // 1,000,000 us per second
 
-  // Read prescale
-  uint16_t prescale = readPrescale();
-  if (prescale == 0) {
-    #ifdef ENABLE_DEBUG_OUTPUT
-    Serial.println(" Prescale read error detected!");
-    #endif
-    return false;
-  }
-
 #ifdef ENABLE_DEBUG_OUTPUT
-  Serial.print(prescale);
+  Serial.print(_prescale);
   Serial.println(" PCA9685 chip prescale");
 #endif
 
   // Calculate the pulse for PWM based on Equation 1 from the datasheet section
   // 7.3.5
-  prescale += 1;
-  pulselength *= prescale;
+  _prescale += 1;
+  pulselength *= _prescale;
   pulselength /= _oscillator_freq;
 
 #ifdef ENABLE_DEBUG_OUTPUT
@@ -394,11 +395,9 @@ bool Adafruit_PWMServoDriver::isFreqSet(float freq) {
     // Checks if the desired frequency is already set
     // Works by seeing if the prescale would actually be changed by the new frequency, hence
     // providing a way to avoid unnecessary changes, useful to avoid glitches.
-    uint8_t current_prescale = readPrescale();
-
     uint8_t new_prescale = calcPrescale(freq);
 
-    return new_prescale == current_prescale;
+    return new_prescale == _prescale;
 }
 
 /*!
