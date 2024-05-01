@@ -318,7 +318,7 @@ bool Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
   uint16_t prescale = readPrescale();
   if (prescale == 0) {
     #ifdef ENABLE_DEBUG_OUTPUT
-    Serial.println("Prescale read error detected");
+    Serial.println(" Prescale read error detected!");
     #endif
     return false;
   }
