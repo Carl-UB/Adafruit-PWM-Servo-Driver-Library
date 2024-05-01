@@ -331,8 +331,7 @@ bool Adafruit_PWMServoDriver::writeMicroseconds(uint8_t num,
 
   // Calculate the pulse for PWM based on Equation 1 from the datasheet section
   // 7.3.5
-  _prescale += 1;
-  pulselength *= _prescale;
+  pulselength *= (_prescale + 1);
   pulselength /= _oscillator_freq;
 
 #ifdef ENABLE_DEBUG_OUTPUT
